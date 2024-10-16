@@ -1,0 +1,40 @@
+---
+- name: Creds depending on OS Type 
+  hosts: all
+  gather_facts: no
+  serial: 1
+  tasks:
+      
+    - name: may be linux 
+      block:  
+        - name: Linux Creds Injection 
+          set_fact:
+            ansible_connection: "ssh"
+            ansible_user: "{{ lookup('env', 'linux_username_ev') }}" 
+            ansible_password: "{{ lookup('env', 'linux_password_ev') }}" 
+        
+        - name: ping just for test if windows
+          ping:
+          register: ping_result
+          ignore_errors: true
+          ignore_unreachable: true
+
+        - name: Windows Creds Injection 
+          set_fact:
+            ansible_port: 5985
+            ansible_connection: "winrm"
+            ansible_user: "{{ lookup('env', 'windows_username_ev') }}"
+            ansible_password: "{{ lookup('env', 'windows_password_ev') }}" 
+            ansible_winrm_transport: "ntlm"
+          when: ping_result.unreachable is defined and ping_result.unreachable == true
+            
+        - name: Gathering facts whatever OS type
+          setup:
+
+    - name: Display Creds seen by every Host depending on OS type 
+      debug:
+        msg:
+          - "Host: {{ inventory_hostname }}"
+          - "OS Family: {{ ansible_facts['os_family'] }}"
+          - "Connection: {{ ansible_connection }}"
+          - "User: {{ ansible_user }}"
